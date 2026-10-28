@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kurskalender DRK Kreisverband Ulm/Donau</title>
+<style>
+:root{
+  --bg:#f6f5f2;--surface:#fff;--ink:#1d1d1f;--muted:#6b6b70;--line:#dcdad4;--accent:#c8102e;
+  --u:#c8102e;--e:#1f7a4d;--l:#c9741a;--r:#2b64b3;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#17171a;--surface:#222226;--ink:#f0eeea;--muted:#a09fa6;--line:#3a3a40;--accent:#ff4d62;
+  --u:#ff6b7d;--e:#4cc38a;--l:#f0a24f;--r:#6fa4f0;}}
+:root[data-theme="dark"]{--bg:#17171a;--surface:#222226;--ink:#f0eeea;--muted:#a09fa6;--line:#3a3a40;--accent:#ff4d62;
+  --u:#ff6b7d;--e:#4cc38a;--l:#f0a24f;--r:#6fa4f0;}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 14px 40px}
+h1{font-size:1.35rem;margin:0 0 2px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 16px;font-size:.9rem}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.nav{display:flex;align-items:center;gap:6px}
+.nav button,.f{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+.nav button:hover,.f:hover{border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#mon{font-weight:600;font-size:1.15rem;min-width:9.5ch;text-align:center}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.f{display:flex;align-items:center;gap:6px;padding:4px 10px;font-size:.88rem}
+.f i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.f[aria-pressed="false"]{opacity:.45}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--line);gap:1px}
+.wd{background:var(--surface);text-align:center;font-size:.8rem;color:var(--muted);padding:6px 0}
+.day{background:var(--surface);min-height:92px;padding:4px;display:flex;flex-direction:column;gap:3px}
+.day.off{background:var(--bg)}
+.day .n{font-size:.8rem;color:var(--muted)}
+.day.today .n{color:#fff;background:var(--accent);border-radius:10px;padding:0 7px;align-self:flex-start}
+.chip{display:block;width:100%;text-align:left;font:inherit;font-size:.72rem;line-height:1.25;border:0;border-left:3px solid var(--c);background:color-mix(in srgb,var(--c) 14%,var(--surface));color:var(--ink);border-radius:3px;padding:2px 4px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list{margin-top:22px;display:grid;gap:10px}
+.item{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:8px;padding:12px 14px}
+.item.hl{outline:2px solid var(--accent)}
+.item h2{font-size:1rem;margin:0}
+.nr{color:var(--muted);font-size:.82rem}
+.item ul{margin:8px 0;padding-left:0;list-style:none;display:flex;flex-wrap:wrap;gap:4px 14px;font-variant-numeric:tabular-nums}
+.meta{font-size:.88rem;color:var(--muted)}
+.full{color:var(--accent);font-weight:600}
+.empty{color:var(--muted);padding:14px 0}
+footer{margin-top:26px;font-size:.8rem;color:var(--muted)}
+@media (max-width:640px){
+  .day{min-height:56px;padding:3px}
+  .chip{width:100%;height:8px;padding:0;font-size:0;border-left-width:0;background:var(--c);border-radius:4px}
+  .day .n{font-size:.75rem}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Kurskalender</h1>
+  <p class="sub">DRK Kreisverband Ulm/Donau e. V. – Lehrgänge und Termine</p>
+  <div class="bar">
+    <div class="nav">
+      <button id="prev" aria-label="Vorheriger Monat">‹</button>
+      <span id="mon" aria-live="polite"></span>
+      <button id="next" aria-label="Nächster Monat">›</button>
+      <button id="next-ev">Nächster Termin</button>
+    </div>
+    <div class="filters" id="filters"></div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="list" id="list"></div>
+  <footer>Stand der Daten: <span id="stand">–</span>. Die Anmeldung erfolgt nicht über diese Seite.</footer>
+</main>
+<script>
+const P={
+  u:{n:"Ulm",a:"DRK-Geschäftsstelle, Frauenstraße 125, 89073 Ulm"},
+  e:{n:"Ehingen",a:"DRK-Zentrum, Mühlweg 10, 89584 Ehingen"},
+  l:{n:"Laichingen",a:"DRK-Zentrum, Uhlandstraße 12, 89150 Laichingen"},
+  r:{n:"Erbach",a:"DRK Ortsverein, Wagnerstraße 2, 89155 Erbach"}
+};
+/* d: Datum oder Datum@abweichende Zeit; z: Standardzeit; f: freie Plätze; g: Gebühr auf Anfrage */
+let C=[],E=[];
+const MN=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const WD=["So","Mo","Di","Mi","Do","Fr","Sa"];
+const pad=n=>String(n).padStart(2,"0");
+function build(){E=[];C.forEach((c,i)=>c.d.forEach(s=>{const[dt,tm]=s.split("@");E.push({i,dt,tm:tm||c.z});}));E.sort((a,b)=>a.dt.localeCompare(b.dt)||a.tm.localeCompare(b.tm));}
+const fmt=dt=>{const[y,m,d]=dt.split("-").map(Number);return WD[new Date(y,m-1,d).getDay()]+". "+pad(d)+"."+pad(m)+"."+(y);};
+const act=new Set(Object.keys(P));
+let Y=2026,M=10;
+const now=new Date(),todayKey=now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate());
+const grid=document.getElementById("grid"),list=document.getElementById("list");
+
+document.getElementById("filters").innerHTML=Object.entries(P).map(([k,v])=>
+  `<button class="f" data-k="${k}" aria-pressed="true" style="--c:var(--${k})"><i></i>${v.n}</button>`).join("");
+document.getElementById("filters").onclick=e=>{
+  const b=e.target.closest(".f");if(!b)return;const k=b.dataset.k;
+  act.has(k)?act.delete(k):act.add(k);b.setAttribute("aria-pressed",act.has(k));render();
+};
+
+function render(){
+  document.getElementById("mon").textContent=MN[M]+" "+Y;
+  const off=(new Date(Y,M,1).getDay()+6)%7,days=new Date(Y,M+1,0).getDate();
+  const ym=Y+"-"+pad(M+1)+"-";
+  let h=["Mo","Di","Mi","Do","Fr","Sa","So"].map(d=>`<div class="wd">${d}</div>`).join("");
+  const total=Math.ceil((off+days)/7)*7;
+  for(let c=0;c<total;c++){
+    const d=c-off+1;
+    if(d<1||d>days){h+=`<div class="day off"></div>`;continue;}
+    const key=ym+pad(d);
+    const ev=E.filter(e=>e.dt===key&&act.has(C[e.i].p));
+    h+=`<div class="day${key===todayKey?" today":""}"><span class="n">${d}</span>`+
+      ev.map(e=>{const c=C[e.i];return `<button class="chip" style="--c:var(--${c.p})" data-i="${e.i}" title="${c.t}, ${e.tm.replace("-","–")} Uhr">${e.tm.slice(0,5)} ${c.t}</button>`;}).join("")+`</div>`;
+  }
+  grid.innerHTML=h;
+  const ids=[...new Set(E.filter(e=>e.dt.startsWith(ym)&&act.has(C[e.i].p)).map(e=>e.i))];
+  list.innerHTML=ids.length?ids.map(i=>{
+    const c=C[i],inM=E.filter(e=>e.i===i&&e.dt.startsWith(ym)),all=c.d.length,last=c.d[all-1].split("@")[0];
+    return `<article class="item" id="c${i}" style="--c:var(--${c.p})">
+      <h2>${c.t}</h2><div class="nr">${c.n}</div>
+      <ul>${inM.map(e=>`<li>${fmt(e.dt)}, ${e.tm.replace("-","–")} Uhr</li>`).join("")}</ul>
+      <div class="meta">${P[c.p].n}: ${P[c.p].a}<br>${c.f} freie Plätze${c.g?" · Gebühr auf Anfrage":""}${inM.length<all?`<br>Kurs insgesamt ${all} Termine, letzter Termin ${fmt(last)}`:""}</div>
+    </article>`;}).join(""):`<p class="empty">In diesem Monat gibt es keine Termine${act.size<4?" für die gewählten Orte":""}.</p>`;
+}
+grid.onclick=e=>{
+  const b=e.target.closest(".chip");if(!b)return;
+  const el=document.getElementById("c"+b.dataset.i);if(!el)return;
+  document.querySelectorAll(".item.hl").forEach(x=>x.classList.remove("hl"));
+  el.classList.add("hl");el.scrollIntoView({behavior:"smooth",block:"center"});
+};
+const step=n=>{M+=n;if(M<0){M=11;Y--;}if(M>11){M=0;Y++;}render();};
+document.getElementById("prev").onclick=()=>step(-1);
+document.getElementById("next").onclick=()=>step(1);
+document.getElementById("next-ev").onclick=()=>{
+  const cur=Y+"-"+pad(M+1)+"-31";
+  const n=E.find(e=>e.dt>cur&&act.has(C[e.i].p));
+  if(n){Y=+n.dt.slice(0,4);M=+n.dt.slice(5,7)-1;render();}
+};
+fetch("kurse.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
+  C=j.kurse;build();document.getElementById("stand").textContent=j.stand;
+  const n=E.find(e=>e.dt>=todayKey)||E[0];
+  if(n){Y=+n.dt.slice(0,4);M=+n.dt.slice(5,7)-1;}
+  render();
+}).catch(()=>{render();list.innerHTML='<p class="empty">Die Termine konnten nicht geladen werden.</p>';});
+</script>
+</body>
+</html>
